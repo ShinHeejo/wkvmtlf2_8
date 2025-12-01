@@ -1,62 +1,63 @@
 package domain;
 
+import domain.card.Card;
+
 public class GameRoom {
     private String roomId;
     private Player p1;
     private Player p2;
-    private int turn = 1; // 1턴부터 시작
+    private int turn = 1;
     private boolean isGameOver = false;
-    private String lastRoundMessage = "게임 시작";
+    private String lastRoundMessage = "게임 대기 중...";
 
     public GameRoom(String roomId, Player p1) {
         this.roomId = roomId;
         this.p1 = p1;
     }
 
-    public void join(Player p2) {
-        this.p2 = p2;
-    }
+    public void join(Player p2) { this.p2 = p2; }
     
-    // 두 명이 다 찼는지 확인
-    public boolean isFull() {
-        return p1 != null && p2 != null;
-    }
+    public boolean isFull() { return p1 != null && p2 != null; }
 
-    //[cite_start]// 두 명이 모두 카드를 냈는지 확인 [cite: 1] (4번 항목)
     public boolean isRoundReady() {
         return p1.getCurrentCard() != null && p2.getCurrentCard() != null;
     }
 
-    //[cite_start]// 턴 결과 계산 (승패 판정) [cite: 1] (5, 6, 7번 항목)
+    // [핵심 변경] 숫자 비교 -> 객체의 getPower(), getScore() 사용
     public void resolveTurn() {
         if (!isRoundReady()) return;
 
-        int c1 = p1.getCurrentCard();
-        int c2 = p2.getCurrentCard();
+        Card c1 = p1.getCurrentCard();
+        Card c2 = p2.getCurrentCard();
 
-        if (c1 > c2) {
-            p1.addScore();
-            this.lastRoundMessage = "P1 승리 (" + c1 + " vs " + c2 + ")";
-        } else if (c1 < c2) {
-            p2.addScore();
-            this.lastRoundMessage = "P2 승리 (" + c1 + " vs " + c2 + ")";
+        int power1 = c1.getPower();
+        int power2 = c2.getPower();
+
+        StringBuilder sb = new StringBuilder();
+        // 결과 메시지에 카드 이름(속성 포함)을 표시
+        sb.append(String.format("결과: P1 %s vs P2 %s -> ", c1.getName(), c2.getName()));
+
+        if (power1 > power2) {
+            int scoreGain = c1.getScore(); // 이긴 카드의 점수 획득량
+            p1.addScore(scoreGain);
+            sb.append("P1 승리! (+" + scoreGain + "점)");
+        } else if (power1 < power2) {
+            int scoreGain = c2.getScore();
+            p2.addScore(scoreGain);
+            sb.append("P2 승리! (+" + scoreGain + "점)");
         } else {
-            this.lastRoundMessage = "무승부 (" + c1 + " vs " + c2 + ")";
+            sb.append("무승부");
         }
 
-        // 라운드 정리
+        this.lastRoundMessage = sb.toString();
+        
         p1.resetCurrentCard();
         p2.resetCurrentCard();
         this.turn++;
 
-        //[cite_start]// 게임 종료 조건 확인 (10턴 초과 시) [cite: 1] (0번 항목)
-        if (this.turn > 10) {
-            this.isGameOver = true;
-            this.lastRoundMessage = "게임 종료! 최종 스코어 확인";
-        }
+        if (this.turn > 10) isGameOver = true;
     }
 
-    // Getter
     public String getRoomId() { return roomId; }
     public Player getP1() { return p1; }
     public Player getP2() { return p2; }

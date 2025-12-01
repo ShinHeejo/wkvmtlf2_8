@@ -1,67 +1,76 @@
 package CardGameSystem;
 
-import java.util.Scanner;
 import dto.GameStatusDto;
 import service.GameService;
 import service.GameServiceImpl;
+import java.util.Scanner;
 
 public class main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        GameService gameService = new GameServiceImpl(); 
-
-        System.out.println("=== 카드 게임 테스트 ===");
-
+        GameService gameService = new GameServiceImpl();
 
         String p1Id = "User1";
         String p2Id = "Computer";
         String roomId = gameService.createRoom(p1Id);
         gameService.joinRoom(roomId, p2Id);
-        System.out.println("방 생성 완료: " + roomId);
         
+        System.out.println("=== 카드 게임 시작 ===");
+        System.out.println("카드 종류: 일반 카드, 숫자+2 카드, 점수 2배 카드\n");
 
         while (true) {
             GameStatusDto status = gameService.getGameStatus(roomId);
-            
+
             if ("FINISHED".equals(status.getPhase())) {
                 System.out.println("\n=== 게임 종료 ===");
-                System.out.println("최종 스코어 - 나: " + status.getP1Score() + ", 상대: " + status.getP2Score());
-                if (status.getP1Score() > status.getP2Score()) System.out.println("나의 승리!");
-                else if (status.getP1Score() < status.getP2Score()) System.out.println("상대방 승리!");
-                else System.out.println("무승부!");
+                System.out.printf("최종 스코어 - 나: %d vs 상대: %d\n", status.getP1Score(), status.getP2Score());
                 break;
             }
 
-            System.out.println("\n--------------------------------");
-            System.out.println("현재 턴: " + status.getTurn() + " / 10");
-            System.out.println("내 점수: " + status.getP1Score() + " vs 상대 점수: " + status.getP2Score());
-            System.out.print("낼 카드 번호 입력 : ");
-
-            try {
-                int myCard = scanner.nextInt();
-                
-                // P1(나) 카드 제출
-                gameService.playCard(roomId, p1Id, myCard);
-                System.out.println("나: " + myCard + " 제출 완료.");
-
-                int computerCard = (int)(Math.random() * 10) + 1; 
-
-                try {
-                    gameService.playCard(roomId, p2Id, computerCard);
-                    System.out.println("상대: 카드를 제출했습니다.");
-                } catch (Exception e) {
-                    // P2가 이미 쓴 카드를 낸 경우 등
-                    System.out.println("상대방(Simulated) 카드 제출 실패(이미 쓴 카드 등): " + computerCard);
-                    // 테스트를 위해 강제로 진행시키진 않고 이번 턴 다시 시도해야 함
+            System.out.println("\n---------------- TURN " + status.getTurn() + " ----------------");
+            System.out.printf("점수 현황 - [나: %d점] vs [상대: %d점]\n", status.getP1Score(), status.getP2Score());
+            
+            // [추가] 내 패 목록 보여주기
+            System.out.println("\n[ 나의 패 목록 ]");
+            if (status.getMyDeckList() != null) {
+                for (String cardName : status.getMyDeckList()) {
+                    System.out.print(cardName + " | ");
                 }
-                
-                // 결과 확인
-                GameStatusDto result = gameService.getGameStatus(roomId);
-                System.out.println("결과: " + result.getRoundResult());
-                
-            } catch (Exception e) {
-                System.out.println("오류 발생: " + e.getMessage());
             }
+            System.out.println(); // 줄바꿈
+
+            // 내 차례 입력
+            boolean p1Success = false;
+            while (!p1Success) {
+                System.out.print("\n낼 카드의 '숫자(값)'를 입력하세요: ");
+                try {
+                    int num = scanner.nextInt();
+                    // 인덱스 변환 없이 숫자 그대로 전달
+                    gameService.playCard(roomId, p1Id, num);
+                    System.out.println(">> 나: " + num + "번 카드 제출");
+                    p1Success = true;
+                } catch (Exception e) {
+                    System.out.println("❌ 오류: 없는 숫자거나 이미 낸 카드입니다.");
+                }
+            }
+
+            // 상대(컴퓨터) 차례
+            boolean p2Success = false;
+            while (!p2Success) {
+                try {
+                    // 컴퓨터는 랜덤으로 1~10 숫자 중 하나를 시도
+                    int randomNum = (int)(Math.random() * 10) + 1;
+                    gameService.playCard(roomId, p2Id, randomNum);
+                    System.out.println(">> 상대: 카드를 제출했습니다.");
+                    p2Success = true;
+                } catch (Exception e) {
+                    // 이미 낸 숫자면 다시 루프
+                }
+            }
+
+            // 결과 확인
+            status = gameService.getGameStatus(roomId);
+            System.out.println("📢 " + status.getRoundResult());
         }
         scanner.close();
     }

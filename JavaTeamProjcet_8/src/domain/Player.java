@@ -1,44 +1,53 @@
 package domain;
 
-import java.util.ArrayList;
+import domain.card.Card;
+import domain.factory.DeckFactory;
 import java.util.List;
 
 public class Player {
     private String playerId;
     private int score;
-    private List<Integer> deck;
-    private Integer currentCard; // 이번 턴에 낸 카드 (안 냈으면 null)
+    private List<Card> deck;
+    private Card currentCard;
 
     public Player(String playerId) {
         this.playerId = playerId;
         this.score = 0;
-        this.deck = new ArrayList<>();
-        // 1부터 10까지 덱 생성
-        for (int i = 1; i <= 10; i++) {
-            deck.add(i);
-        }
+        this.deck = DeckFactory.createBalancedDeck();
     }
 
-    // 카드를 내는 행위 (검증 포함)
-    public void playCard(int cardNum) {
-        if (!deck.contains(cardNum)) {
-            throw new IllegalArgumentException("보유하지 않은 카드입니다.");
+    // [수정] 인덱스 대신 '카드 숫자'로 찾아서 제출
+    public void playCard(int cardNumber) {
+        Card foundCard = null;
+        
+        // 덱에서 해당 숫자를 가진 카드 찾기
+        for (Card c : deck) {
+            if (c.getNumber() == cardNumber) {
+                foundCard = c;
+                break;
+            }
         }
-        this.deck.remove(Integer.valueOf(cardNum)); // 덱에서 삭제
-        this.currentCard = cardNum;
+
+        if (foundCard == null) {
+            throw new IllegalArgumentException("해당 숫자의 카드가 없습니다.");
+        }
+
+        // 덱에서 제거하고 현재 카드로 설정
+        deck.remove(foundCard);
+        this.currentCard = foundCard;
     }
     
     public void resetCurrentCard() {
         this.currentCard = null;
     }
 
-    public void addScore() {
-        this.score++;
+    public void addScore(int points) {
+        this.score += points;
     }
 
-    // Getter
+    // Getters
     public String getPlayerId() { return playerId; }
     public int getScore() { return score; }
-    public List<Integer> getDeck() { return deck; }
-    public Integer getCurrentCard() { return currentCard; }
+    public List<Card> getDeck() { return deck; }
+    public Card getCurrentCard() { return currentCard; }
 }

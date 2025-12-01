@@ -1,32 +1,44 @@
 package dto;
 
+import java.util.List;
+
 public class GameStatusDto {
     private String roomId;
-    private int turn;           // 현재 턴 수
-    private String phase;       // "WAITING"(대기중), "PLAYING"(진행중), "FINISHED"(게임종료)
-    private String roundResult; // 이번 턴 결과 메시지 (예: "P1 승리!")
-    private int p1Card;         // P1이 낸 카드 (공개 전에는 0)
-    private int p2Card;         // P2가 낸 카드
+    private int turn;
+    private String phase;
+    private String roundResult;
+    
+    private String p1CardName;  
+    private String p2CardName;
+    
     private int p1Score;
     private int p2Score;
     
-    // 생성자, Getter, Setter, toString
+    // [추가] 내 패 목록 (이름으로 저장)
+    private List<String> myDeckList;
+    
     public GameStatusDto() {}
     
-    // 편의를 위해 모든 필드를 받는 생성자 대신 Builder 패턴이나 Setter 사용 권장하지만
-    // 여기선 간단히 Setter만 생성하셔도 됩니다.
-    public String getPhase() { return phase; }
-    public void setPhase(String phase) { this.phase = phase; }
+    // Getters and Setters
+    public String getRoomId() { return roomId; }
+    public void setRoomId(String roomId) { this.roomId = roomId; }
     public int getTurn() { return turn; }
     public void setTurn(int turn) { this.turn = turn; }
+    public String getPhase() { return phase; }
+    public void setPhase(String phase) { this.phase = phase; }
     public String getRoundResult() { return roundResult; }
     public void setRoundResult(String roundResult) { this.roundResult = roundResult; }
+    
+    public String getP1CardName() { return p1CardName; }
+    public void setP1CardName(String p1CardName) { this.p1CardName = p1CardName; }
+    public String getP2CardName() { return p2CardName; }
+    public void setP2CardName(String p2CardName) { this.p2CardName = p2CardName; }
+    
     public int getP1Score() { return p1Score; }
     public void setP1Score(int p1Score) { this.p1Score = p1Score; }
     public int getP2Score() { return p2Score; }
     public void setP2Score(int p2Score) { this.p2Score = p2Score; }
-    public int getP1Card() { return p1Card; }
-    public void setP1Card(int p1Card) { this.p1Card = p1Card; }
-    public int getP2Card() { return p2Card; }
-    public void setP2Card(int p2Card) { this.p2Card = p2Card; }
+    
+    public List<String> getMyDeckList() { return myDeckList; }
+    public void setMyDeckList(List<String> myDeckList) { this.myDeckList = myDeckList; }
 }
