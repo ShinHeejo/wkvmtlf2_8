@@ -7,7 +7,7 @@ import java.util.List;
 
 public class DeckFactory {
     
-    // [수정] 확률이 아니라, '공격형 1장', '대박형 1장'을 확정적으로 포함시킴
+    // '공격형 1장', '대박형 1장'을 확정적으로 포함시킴
     public static List<Card> createBalancedDeck() {
         List<Card> deck = new ArrayList<>();
         

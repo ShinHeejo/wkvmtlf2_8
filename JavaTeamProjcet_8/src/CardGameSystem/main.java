@@ -5,6 +5,7 @@ import service.GameService;
 import service.GameServiceImpl;
 import java.util.Scanner;
 
+// 콘솔 테스트용으로 작성된 코드임. 서버 통합할때는 이 코드 제외하기
 public class main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
