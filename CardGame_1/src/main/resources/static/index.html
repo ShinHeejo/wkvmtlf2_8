@@ -87,6 +87,27 @@ body {
     margin-bottom: 4px;
 }
 
+.legend-box {
+    background-color: #fff;
+    border: 2px dashed #aaa;
+    border-radius: 10px;
+    padding: 10px 20px;
+    margin: 10px 0 20px 0;
+    display: inline-block;
+    text-align: left;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+}
+
+.legend-item {
+    display: block;
+    margin: 5px 0;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.text-blue { color: #007bff; }
+.text-purple { color: #a020f0; }
+
 .card.powerup-card { border-color: #007bff; }
 .card.double-card  { border-color: #a020f0; }
 </style>
@@ -94,6 +115,15 @@ body {
 <body>
 
 <h1>카드게임</h1>
+
+<div class="legend-box">
+    <div class="legend-item">
+        <span class="text-blue">🟦 파란색 테두리 [카드 강화]</span> : 카드 수치 <strong>+2</strong> (숫자가 2 높은 것으로 판정)
+    </div>
+    <div class="legend-item">
+        <span class="text-purple">🟪 보라색 테두리 [점수 2배]</span> : 승리 시 점수 <strong>2배</strong> (이기면 2점 획득)
+    </div>
+</div>
 
 <div class="score-line">
     내 이름: <span id="myNameView">-</span>
