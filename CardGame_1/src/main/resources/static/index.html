@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>카드게임</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f0f8ff;
+}
+
+#log {
+    position: fixed;
+    right: 20px;
+    top: 80px;
+    background-color: #FFFFCC;
+    width: 360px;
+    height: 520px;
+    padding: 20px;
+    overflow: auto;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    white-space: pre-wrap; 
+}
+
+.card {
+    position: fixed;
+    bottom: 10px;
+    background-color: white;
+    border: 2px solid #555;
+    border-radius: 5px;
+    padding: 48px 40px;
+    font-size: 80px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.card:hover {
+    background-color: #4CAF50;
+    color: white;
+}
+.card.selected {
+    border-color: red;
+    box-shadow: 0 0 10px red;
+}
+.card[disabled] {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.card1 { left: 50px; }
+.card2 { left: 244px; }
+.card3 { left: 438px; }
+.card4 { left: 632px; }
+.card5 { left: 826px; }
+.card6 { left: 1020px; }
+.card7 { left: 1214px; }
+.card8 { left: 1408px; }
+.card9 { left: 1602px; }
+.card10 { left: 1750px; }
+
+.cardU  { left: 826px; bottom: 600px; border: 5px solid #555; }
+.cardMe { left: 826px; bottom: 300px; border: 5px solid #555; }
+
+#submitCardBtn {
+    position: fixed;
+    left: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 20px 30px;
+    background-color: #ffcc00;
+    border: 3px solid #444;
+    border-radius: 10px;
+    font-size: 30px;
+    cursor: pointer;
+}
+#submitCardBtn:hover {
+    background-color: #ffaa00;
+}
+#submitCardBtn[disabled] {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.score-line {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.card.powerup-card { border-color: #007bff; }
+.card.double-card  { border-color: #a020f0; }
+</style>
+</head>
+<body>
+
+<h1>카드게임</h1>
+
+<div class="score-line">
+    내 이름: <span id="myNameView">-</span>
+</div>
+<div class="score-line">
+    상대 이름: <span id="opponentNameView">-</span>
+</div>
+
+<div class="score-line">
+    내 점수(<span id="myNameInScore">-</span>):
+    <span id="score-my">0</span>
+</div>
+<div class="score-line">
+    상대 점수(<span id="opponentNameInScore">-</span>):
+    <span id="score-opponent">0</span>
+</div>
+
+<div class="score-line">
+    지난 턴 상대 카드: <span id="last-top">-</span>
+</div>
+<div class="score-line">
+    지난 턴 내 카드: <span id="last-bottom">-</span>
+</div>
+
+<div class="score-line">
+    현재 턴: <span id="turn">-</span>,
+    상태: <span id="phase">WAITING</span>
+</div>
+
+<div class="score-line">
+    현재 선택: <span id="currentSelection">없음</span>
+</div>
+
+<div id="log"></div>
+
+<button id="submitCardBtn" disabled>제출하기</button>
+
+<button class="card card1"  data-number="1"  disabled>1</button>
+<button class="card card2"  data-number="2"  disabled>2</button>
+<button class="card card3"  data-number="3"  disabled>3</button>
+<button class="card card4"  data-number="4"  disabled>4</button>
+<button class="card card5"  data-number="5"  disabled>5</button>
+<button class="card card6"  data-number="6"  disabled>6</button>
+<button class="card card7"  data-number="7"  disabled>7</button>
+<button class="card card8"  data-number="8"  disabled>8</button>
+<button class="card card9"  data-number="9"  disabled>9</button>
+<button class="card card10" data-number="10" disabled>10</button>
+
+<button class="card cardU"  disabled>?</button>
+<button class="card cardMe" disabled>?</button>
+
+<script>
+const $ = id => document.getElementById(id);
+
+let socket = null;
+let myName = null;
+let selectedCard = null;
+let usedCards = new Set();
+let gameReady = false;
+
+let lastLog = "";
+
+function prettyRoundResult(data, meName, oppName) {
+    if (!data.roundResult) return null;
+
+    let msg = data.roundResult;
+
+    if (data.meIsP1 === true) {
+        msg = msg.replace("P1", meName).replace("P2", oppName);
+    } else if (data.meIsP1 === false) {
+        msg = msg.replace("P1", oppName).replace("P2", meName);
+    }
+    return msg;
+}
+
+function addLog(msg) {
+    if (!msg) return;
+    if (msg === lastLog) return; 
+
+    const logBox = $("log");
+    logBox.textContent += msg + "\n\n"; 
+    lastLog = msg;
+    logBox.scrollTop = logBox.scrollHeight;
+}
+
+function enableUI(enable) {
+    document.querySelectorAll(".card[data-number]").forEach(btn => {
+        const num = parseInt(btn.dataset.number, 10);
+        if (!usedCards.has(num)) {
+            btn.disabled = !enable;
+        }
+    });
+    $("submitCardBtn").disabled = !enable;
+}
+
+function clearSelection() {
+    document.querySelectorAll(".card[data-number]").forEach(btn => {
+        btn.classList.remove("selected");
+    });
+    selectedCard = null;
+    $("currentSelection").textContent = "없음";
+}
+
+function updateCardBuffStyles(myDeckList) {
+    document.querySelectorAll(".card[data-number]").forEach(btn => {
+        btn.classList.remove("powerup-card");
+        btn.classList.remove("double-card");
+    });
+
+    if (!myDeckList || !Array.isArray(myDeckList)) return;
+
+    myDeckList.forEach(name => {
+        const match = name.match(/\[(\d+)\]/);
+        if (!match) return;
+        const num = parseInt(match[1], 10);
+        const btn = document.querySelector(`.card[data-number="${num}"]`);
+        if (!btn) return;
+
+        if (name.includes("강화")) btn.classList.add("powerup-card");
+        if (name.includes("2배")) btn.classList.add("double-card");
+    });
+}
+
+function setupCards() {
+
+    document.querySelectorAll(".card[data-number]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            if (!gameReady || btn.disabled) return;
+
+            clearSelection();
+            btn.classList.add("selected");
+            selectedCard = parseInt(btn.dataset.number, 10);
+            $("currentSelection").textContent = selectedCard + "번";
+        });
+    });
+
+    $("submitCardBtn").addEventListener("click", () => {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            alert("서버에 연결되지 않았습니다.");
+            return;
+        }
+        if (!gameReady) {
+            alert("다른 플레이어를 기다리는 중입니다.");
+            return;
+        }
+        if (!selectedCard) {
+            alert("카드를 선택하세요.");
+            return;
+        }
+
+        socket.send(JSON.stringify({
+            type: "PLAY",
+            playerId: myName,
+            cardNumber: selectedCard
+        }));
+		
+		if (selectedCard && !usedCards.has(selectedCard)) {
+		            usedCards.add(selectedCard); // 사용 목록에 추가
+		            
+		            // 버튼 비활성화 (회색 처리)
+		            const btn = document.querySelector(`.card[data-number="${selectedCard}"]`);
+		            if (btn) btn.disabled = true;
+		            
+		            // 선택 상태 초기화
+		            clearSelection();
+		            
+		            // 제출 버튼도 비활성화 (중복 제출 방지)
+		            $("submitCardBtn").disabled = true;
+		        }
+
+    });
+}
+
+function connect() {
+    const url = (location.protocol === "https:" ? "wss://" : "ws://")
+                + location.host + "/ws/game";
+
+    socket = new WebSocket(url);
+
+    socket.onopen = () => {
+        addLog("서버에 연결됨. 상대를 기다리는 중...");
+        socket.send(JSON.stringify({ type: "JOIN", playerId: myName }));
+    };
+
+    socket.onclose = () => {
+        addLog("연결이 종료되었습니다.");
+        enableUI(false);
+        gameReady = false;
+    };
+
+    socket.onerror = () => {
+        addLog("웹소켓 오류가 발생했습니다.");
+    };
+
+    socket.onmessage = e => {
+        const data = JSON.parse(e.data);
+
+        if (data.error) {
+            if (data.error === "room_full") {
+                alert("이미 2명이 입장한 방입니다.");
+            }
+            addLog("에러: " + data.error);
+            return;
+        }
+
+        const meName = data.meName || myName || "나";
+        const oppName = data.opponentName || "상대";
+
+        $("myNameView").textContent = meName;
+        $("opponentNameView").textContent = oppName;
+        $("myNameInScore").textContent = meName;
+        $("opponentNameInScore").textContent = oppName;
+
+        $("score-my").textContent = data.myScore;
+        $("score-opponent").textContent = data.opponentScore;
+        $("turn").textContent = data.turn;
+        $("phase").textContent = data.phase;
+
+        $("last-top").textContent = data.opponentCardName || "-";
+        $("last-bottom").textContent = data.myCardName || "-";
+        document.querySelector(".cardU").textContent  = data.opponentCardName || "?";
+        document.querySelector(".cardMe").textContent = data.myCardName || "?";
+
+        const pretty = prettyRoundResult(data, meName, oppName);
+        if (pretty) {
+            addLog(pretty);
+        }
+
+        updateCardBuffStyles(data.myDeckList);
+
+        
+
+        document.querySelectorAll(".card[data-number]").forEach(btn => {
+            const num = parseInt(btn.dataset.number, 10);
+            if (usedCards.has(num)) {
+                btn.disabled = true;
+            }
+        });
+
+        if (data.phase === "PLAYING") {
+            gameReady = true;
+            enableUI(true);
+        } else if (data.phase === "FINISHED") {
+            addLog("게임 종료!");
+			// 점수 비교하여 알림 메시지 생성
+			let resultMsg = "";
+			if (data.myScore > data.opponentScore) {
+			resultMsg = "승리!";
+			} else if (data.myScore < data.opponentScore) {
+			resultMsg = "패배";
+			} else {
+			resultMsg = "무승부!";
+			}
+			            
+			// 약간의 딜레이 후 알림 (마지막 로그를 볼 시간을 줌)
+			setTimeout(() => {
+			alert("게임 종료!\n\n" + resultMsg + "\n최종 스코어: " + data.myScore + " vs " + data.opponentScore);
+			}, 500);
+			
+            gameReady = false;
+            enableUI(false);
+        } else { 
+            gameReady = false;
+            enableUI(false);
+        }
+    };
+}
+
+window.onload = () => {
+    myName = prompt("플레이어 이름을 입력하세요", "player" + Math.floor(Math.random() * 1000));
+    if (!myName) {
+        myName = "player" + Math.floor(Math.random() * 1000);
+    }
+    $("myNameView").textContent = myName;
+    $("myNameInScore").textContent = myName;
+
+    addLog("내 이름: " + myName);
+    setupCards();
+    connect();
+};
+</script>
+
+</body>
+</html>
